@@ -152,15 +152,19 @@ $(IMAGE_FILE).xz : $(IMAGE_FILE)
 	$(XZ) -z -c -9 $^ > $@
 
 clean :
+	$(RM) -r -f $(MUSL)
 	$(RM) -r -f $(BUSYBOX)
 	$(RM) -r -f $(LINUX)
 	$(RM) -r -f $(ROOTFS)
 	$(RM) -f $(ROOTFS).tar
 	$(RM) -f $(ROOTFS).tar.xz
+	$(RM) -f initrd.cpio
+	$(RM) -f vmlinuz
 	$(RM) -f $(IMAGE_FILE)
 	$(RM) -f $(IMAGE_FILE).xz
 
 totally-clean : clean
+	$(RM) -r -f musl
 	$(RM) -f $(BUSYBOX).tar.bz2
 	$(RM) -f $(LINUX).tar.xz
 

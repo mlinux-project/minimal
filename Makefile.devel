@@ -61,8 +61,10 @@ dist : check-configures
 
 clean :
 	if test -f Makefile; then $(MAKE) totally-clean; fi
-	$(RM) -r -f *.tar
-	$(RM) -r -f *.xz
+	$(RM) -f *.tar
+	$(RM) -f *.xz
+	$(RM) -f *.gz
+	$(RM) -f *.sha256
 	$(RM) -r -f mlinux-minimal-$(VERSION)
 	$(RM) -f $(ACLOCAL_FILE)
 	$(RM) -f $(CONFIGURE)
