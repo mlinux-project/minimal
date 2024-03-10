@@ -1,0 +1,11 @@
+--- a/init/init.c	2024-03-07 22:17:29.260864006 +0800
++++ b/init/init.c	2024-03-07 22:15:29.730885253 +0800
+@@ -678,7 +678,7 @@
+ 	{
+ 		/* No inittab file - set up some default behavior */
+ 		/* Sysinit */
+-		new_init_action(SYSINIT, INIT_SCRIPT, "");
++		new_init_action(SYSINIT, "sh " INIT_SCRIPT, "");
+ 		/* Askfirst shell on tty1-4 */
+ 		new_init_action(ASKFIRST, bb_default_login_shell, "");
+ //TODO: VC_1 instead of ""? "" is console -> ctty problems -> angry users

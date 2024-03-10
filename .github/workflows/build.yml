@@ -1,0 +1,103 @@
+name: Build MLinux Minimal
+
+on:
+  release:
+    types: [published]
+
+jobs:
+
+  build-dist:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    #--------------------------------------------collect--------------------------------------------
+    - uses: actions/checkout@v4
+    
+    - name: Get infomations
+      run: |
+        tag="${GITHUB_REF#refs/tags/}"
+        echo "tag=$tag" >> $GITHUB_ENV
+        echo "pkgname=mlinux-minimal-$tag" >> $GITHUB_ENV
+        echo "srcdir=$(pwd)" >> $GITHUB_ENV
+
+    - name: Collect dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install autoconf automake -y
+
+    #--------------------------------------------build--------------------------------------------
+    - name: Build tarball
+      run: |
+        sudo make -f Makefile.devel dist VERSION=${{ env.tag }}
+    
+    - name: Sum md5
+      run: |
+        sudo sha256sum ${{ env.pkgname }}.tar.xz > ${{ env.pkgname }}.tar.xz.sha256
+    
+    #--------------------------------------------publish--------------------------------------------
+
+    - name: Create release and upload assets
+      uses: softprops/action-gh-release@v1
+      with:
+          tag_name: ${{ env.tag }}
+          files: |
+            ${{ env.pkgname }}.tar.xz
+            ${{ env.pkgname }}.tar.xz.sha256
+
+
+  build-binary:
+  
+    needs: build-dist
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+    #--------------------------------------------collect--------------------------------------------
+    - name: Get infomations
+      run: |
+        tag="${GITHUB_REF#refs/tags/}"
+        echo "tag=$tag" >> $GITHUB_ENV
+        echo "pkgname=mlinux-minimal-$tag" >> $GITHUB_ENV
+        echo "srcdir=$(pwd)" >> $GITHUB_ENV
+
+    - name: Collect dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install gcc cpio xz-utils gawk grub2 make grep kpartx qemu-utils sed util-linux wget -y
+        sudo apt-get install binutils libelf-dev libssl-dev bc flex bison -y
+
+    - name: Get source distribution tarball
+      run: |
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.tag }}/${{ env.pkgname }}.tar.xz
+        tar xvf ${{ env.pkgname }}.tar.xz
+        mv ${{ env.pkgname }}/* .
+    
+    #--------------------------------------------build--------------------------------------------
+    
+    - name: Build binary distribution
+      run: |
+        ./configure
+        make all -j$(nproc)
+    
+    - name: Make packages
+      run: |
+        sha256sum disk.img.xz > disk.img.xz.sha256
+        sha256sum rootfs.tar.xz > rootfs.tar.xz.sha256
+        sha256sum vmlinuz.xz > vmlinuz.xz.sha256
+    
+    #--------------------------------------------publish--------------------------------------------
+
+    - name: Create release and upload assets
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ env.tag }}
+        files: |
+          disk.img.xz
+          disk.img.xz.sha256
+          rootfs.tar.xz
+          rootfs.tar.xz.sha256
+          vmlinuz.xz
+          vmlinuz.xz.sha256

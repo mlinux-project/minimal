@@ -1,0 +1,75 @@
+# -*- makefile -*-
+# This is the developer's makefile, not the user's makefile.
+# Don't use it unless you know exactly what you do!
+
+ACLOCAL := aclocal
+AUTOCONF := autoconf
+MKDIR := mkdir
+RM := rm -f
+TAR := tar
+XZ := xz
+
+ACLOCAL_FILE = aclocal.m4
+CONFIGURE = configure
+CONFIGURE_IN = configure.ac
+VERSION ?= 0.0.0
+
+ifneq (,)
+This makefile requires GNU Make.
+endif
+
+.PHONY : all check-configures check dist
+
+all : configure
+
+$(ACLOCAL_FILE) : $(CONFIGURE_IN) $(wildcard m4/*.m4)
+	$(ACLOCAL) -I m4 --output=$@ && touch $@ && $(RM) -r -f autom4te.cache
+
+AUTOCONF_FILES = $(ACLOCAL_FILE) $(wildcard m4/*.m4)
+
+$(CONFIGURE) : $(CONFIGURE_IN) $(AUTOCONF_FILES)
+	$(AUTOCONF) && $(RM) -r -f autom4te.cache
+
+check-configures : $(CONFIGURE)
+	set -e; for f in $(CONFIGURE); do bash -x -n $$f; done
+
+check : all check-configures dist
+	./$(CONFIGURE) --with-linux-mirror=TSINGHUA
+	$(MAKE) all
+	$(MAKE) check
+	qemu-system-x86_64 -hda disk.img -m 1024
+	qemu-system-x86_64 -kernel vmlinuz -m 1024
+
+# Make a distribution tarball
+
+CONFIG_FILES = busybox.config grub.cfg linux.config
+
+DOC_FILES = LICENSE README.md
+
+MAKE_FILES = m4 aclocal.m4 configure.ac configure Makefile.devel Makefile.in mirrors.mk.in
+
+SOURCE_FILES = fdisk-input.txt bb-patches
+
+DIST_FILELIST = $(CONFIG_FILES) $(DOC_FILES) $(MAKE_FILES) $(SOURCE_FILES)
+
+dist : check-configures
+	$(RM) -r -f mlinux-minimal-$(VERSION)
+	$(MKDIR) -p mlinux-minimal-$(VERSION)
+	cp -r $(DIST_FILELIST) mlinux-minimal-$(VERSION)
+	$(TAR) -cvf mlinux-minimal-$(VERSION).tar mlinux-minimal-$(VERSION)
+	$(XZ) -9 -f mlinux-minimal-$(VERSION).tar
+
+clean :
+	if test -f Makefile; then $(MAKE) totally-clean; fi
+	$(RM) -r -f *.tar
+	$(RM) -r -f *.xz
+	$(RM) -r -f mlinux-minimal-$(VERSION)
+	$(RM) -f $(ACLOCAL_FILE)
+	$(RM) -f $(CONFIGURE)
+	$(RM) -f $(CONFIGURE)~
+	$(RM) -f autom4te.cache
+	$(RM) -f config.log
+	$(RM) -f config.status
+	$(RM) -f fs
+	$(RM) -f Makefile
+	$(RM) -f mirrors.mk

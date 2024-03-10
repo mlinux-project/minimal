@@ -1,0 +1,170 @@
+# Makefile for MLinux Minimal
+
+# Bug fix.
+PWD ?= $(shell pwd)
+
+# Dependencies for building.
+CC := @CC@
+CHMOD := @CHMOD@
+CHOWN := @CHOWN@
+CPIO := @CPIO@
+FDISK := @FDISK@
+FIND := @FIND@
+GRUB_INSTALL := @GRUB_INSTALL@
+KPARTX := @KPARTX@
+LOSETUP := @LOSETUP@
+MKDIR := @MKDIR@
+MKEXT2 := @MKFS_EXT2@
+MKNOD := @MKNOD@
+MOUNT := @MOUNT@
+PATCH := @PATCH@
+QEMU_IMG := @QEMU_IMG@
+RM := @RM@
+SUDO := @SUDO@
+TAR := @TAR@
+UMOUNT := @UMOUNT@
+WGET := @WGET@
+XZ := @XZ@
+
+CREATE_IMAGE = $(QEMU_IMG) create -f raw $(IMAGE_FILE) $(IMAGE_SIZE)
+
+# Configuration.
+# We only support x86_64 for now.
+ARCH = x86_64
+BUSYBOX = busybox-@BUSYBOX_VERSION@
+BUSYBOX_CONFIG = busybox.config
+FDISK_INPUT_FILE = fdisk-input.txt
+FS_DIR = fs
+FSTAB = fstab
+GRUB_CONFIG = grub.cfg
+IMAGE_FILE = disk.img
+IMAGE_SIZE = 6.1M
+INITRD_FILE = initrd.cpio
+KERNEL = vmlinuz
+LINUX = linux-@LINUX_VERSION@
+LINUX_CONFIG = linux.config
+LINUX_VERSION_MAJOR = @LINUX_VERSION_MAJOR@
+MUSL = musl-@MUSL_VERSION@
+MUSL_CC = $(PWD)/musl/bin/musl-gcc
+ROOTFS = rootfs
+
+# Dependencies for testing.
+DU := du
+
+# Mirrors.
+include mirrors.mk
+BUSYBOX_URL = $(BUSYBOX_MIRROR)/$(BUSYBOX).tar.bz2
+LINUX_URL = $(LINUX_MIRROR)/v$(LINUX_VERSION_MAJOR).x/$(LINUX).tar.xz
+MUSL_URL = $(MUSL_MIRROR)/$(MUSL).tar.gz
+
+ifneq (,)
+This makefile requires GNU Make.
+endif
+
+.PHONY : _makeimg_part_1 _makeimg_part_2 clean totally-clean check
+
+all : $(ROOTFS).tar.xz $(KERNEL).xz $(IMAGE_FILE).xz
+
+$(MUSL).tar.gz : 
+	$(WGET) "$(MUSL_URL)" -O $@
+
+$(MUSL) : $(MUSL).tar.gz
+	@echo "Extracting $@ ..."
+	$(TAR) -zxf $^
+
+musl : $(MUSL) $(LINUX)
+	cd $(MUSL) && ./configure --prefix="$(PWD)/$@" --disable-shared --enable-static --disable-debug --enable-optimize --enable-warnings --enable-wrapper
+	cd $(MUSL) && $(MAKE) all
+	cd $(MUSL) && $(MAKE) install
+	if test ! -f $(MUSL_CC); then echo "$(MUSL_CC) is not exists!" && exit 1; fi
+	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
+
+$(BUSYBOX).tar.bz2 :
+	$(WGET) "$(BUSYBOX_URL)" -O $@
+
+$(BUSYBOX) : $(BUSYBOX).tar.bz2
+	@echo "Extracting $@ ..."
+	$(TAR) -xf $^
+	$(PATCH) -p1 "$@/init/init.c" < bb-patches/init.c.patch
+
+$(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) musl
+	cp $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"
+	cd $(BUSYBOX) && $(MAKE) all CC="$(MUSL_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+$(ROOTFS) : $(BUSYBOX)/busybox
+	$(MKDIR) -p $(ROOTFS)
+
+	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(MUSL_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+	cd $(ROOTFS) && $(MKDIR) -p dev
+	$(SUDO) $(CHOWN) -R root:root $(ROOTFS)
+
+$(ROOTFS).tar.xz : $(ROOTFS)
+	$(TAR) -c -v -f $(ROOTFS).tar $^
+	$(XZ) -z -c -9 $(ROOTFS).tar > $@
+
+$(INITRD_FILE) : $(ROOTFS)
+	cd $(ROOTFS) && $(FIND) . | $(CPIO) -H newc -o -v --owner root:root > "$(PWD)/$@"
+
+$(LINUX).tar.xz :
+	$(WGET) "$(LINUX_URL)" -O $@
+
+$(LINUX) : $(LINUX).tar.xz
+	@echo "Extracting $@ ..."
+	$(TAR) -xf $^
+
+$(LINUX)/arch/$(ARCH)/boot/bzImage : $(LINUX) $(LINUX_CONFIG) $(INITRD_FILE)
+	cp $(LINUX_CONFIG) "$(LINUX)/.config"
+	cd $(LINUX) && $(MAKE) all CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+$(KERNEL) : $(LINUX)/arch/$(ARCH)/boot/bzImage
+	cp $^ $@
+	$(CHMOD) 0755 $@
+
+$(KERNEL).xz : $(KERNEL)
+	$(XZ) -z -c -9 $^ > $@
+
+$(IMAGE_FILE) : $(KERNEL) $(FDISK_INPUT_FILE)
+	$(CREATE_IMAGE)
+	$(SUDO) $(FDISK) $(IMAGE_FILE) < $(FDISK_INPUT_FILE)
+	$(MAKE) _makeimg_part_1 LOOP_DEVICE="$$($(SUDO) $(LOSETUP) -f --show $(IMAGE_FILE))"
+_makeimg_part_1 :
+	@echo "$(LOOP_DEVICE)"
+	$(MAKE) _makeimg_part_2 MAPPER_DEVICE="/dev/mapper/$$($(SUDO) $(KPARTX) -av $(LOOP_DEVICE) | awk '{print $$3}')"
+_makeimg_part_2 :
+	@echo "$(MAPPER_DEVICE)"
+	$(SUDO) $(MKEXT2) $(MAPPER_DEVICE)
+
+	$(SUDO) $(MKDIR) -p $(FS_DIR)
+	$(SUDO) $(MOUNT) $(MAPPER_DEVICE) $(FS_DIR)
+	$(SUDO) $(GRUB_INSTALL) --root-directory="$(PWD)/$(FS_DIR)" $(IMAGE_FILE) --compress=xz --locales= --themes= --install-modules="normal part_msdos ext2 linux"
+	$(SUDO) cp -f $(GRUB_CONFIG) "$(FS_DIR)/boot/grub/grub.cfg"
+
+	$(SUDO) cp $(KERNEL) "$(PWD)/$(FS_DIR)/boot/vmlinuz"
+	$(SUDO) $(CHOWN) -R root:root $(FS_DIR)
+	$(SUDO) ls -R "$(FS_DIR)"
+	$(SUDO) $(UMOUNT) -R $(FS_DIR)
+	$(SUDO) $(KPARTX) -dv $(LOOP_DEVICE)
+	$(SUDO) $(LOSETUP) -d $(LOOP_DEVICE)
+	$(SUDO) $(RM) -r -f $(FS_DIR)
+
+$(IMAGE_FILE).xz : $(IMAGE_FILE)
+	$(XZ) -z -c -9 $^ > $@
+
+clean :
+	$(RM) -r -f $(BUSYBOX)
+	$(RM) -r -f $(LINUX)
+	$(RM) -r -f $(ROOTFS)
+	$(RM) -f $(ROOTFS).tar
+	$(RM) -f $(ROOTFS).tar.xz
+	$(RM) -f $(IMAGE_FILE)
+	$(RM) -f $(IMAGE_FILE).xz
+
+totally-clean : clean
+	$(RM) -f $(BUSYBOX).tar.bz2
+	$(RM) -f $(LINUX).tar.xz
+
+check : all
+	@echo "BUSYBOX: $(BUSYBOX)"
+	$(SUDO) $(DU) -sh $(ROOTFS).tar.xz $(IMAGE_FILE).xz
+	cd $(BUSYBOX) && make check
