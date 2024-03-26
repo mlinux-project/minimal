@@ -8,19 +8,15 @@ CC := @CC@
 CHMOD := @CHMOD@
 CHOWN := @CHOWN@
 CPIO := @CPIO@
-FDISK := @FDISK@
 FIND := @FIND@
-GRUB_INSTALL := @GRUB_INSTALL@
-KPARTX := @KPARTX@
-LOSETUP := @LOSETUP@
 MKDIR := @MKDIR@
-MKEXT2 := @MKFS_EXT2@
-MKNOD := @MKNOD@
+MKFS := @MKFS@
 MOUNT := @MOUNT@
 PATCH := @PATCH@
 QEMU_IMG := @QEMU_IMG@
 RM := @RM@
 SUDO := @SUDO@
+SYSLINUX := @SYSLINUX@
 TAR := @TAR@
 UMOUNT := @UMOUNT@
 WGET := @WGET@
@@ -33,10 +29,8 @@ CREATE_IMAGE = $(QEMU_IMG) create -f raw $(IMAGE_FILE) $(IMAGE_SIZE)
 ARCH = x86_64
 BUSYBOX = busybox-@BUSYBOX_VERSION@
 BUSYBOX_CONFIG = busybox.config
-FDISK_INPUT_FILE = fdisk-input.txt
 FS_DIR = fs
 FSTAB = fstab
-GRUB_CONFIG = grub.cfg
 IMAGE_FILE = disk.img
 IMAGE_SIZE = 6.1M
 INITRD_FILE = initrd.cpio
@@ -47,6 +41,7 @@ LINUX_VERSION_MAJOR = @LINUX_VERSION_MAJOR@
 MUSL = musl-@MUSL_VERSION@
 MUSL_CC = $(PWD)/musl/bin/musl-gcc
 ROOTFS = rootfs
+SYSLINUX_CFG = syslinux.config
 
 # Dependencies for testing.
 DU := du
@@ -124,29 +119,14 @@ $(KERNEL) : $(LINUX)/arch/$(ARCH)/boot/bzImage
 $(KERNEL).xz : $(KERNEL)
 	$(XZ) -z -c -9 $^ > $@
 
-$(IMAGE_FILE) : $(KERNEL) $(FDISK_INPUT_FILE)
+$(IMAGE_FILE) : $(KERNEL) $(SYSLINUX_CFG)
 	$(CREATE_IMAGE)
-	$(SUDO) $(FDISK) $(IMAGE_FILE) < $(FDISK_INPUT_FILE)
-	$(MAKE) _makeimg_part_1 LOOP_DEVICE="$$($(SUDO) $(LOSETUP) -f --show $(IMAGE_FILE))"
-_makeimg_part_1 :
-	@echo "$(LOOP_DEVICE)"
-	$(MAKE) _makeimg_part_2 MAPPER_DEVICE="/dev/mapper/$$($(SUDO) $(KPARTX) -av $(LOOP_DEVICE) | awk '{print $$3}')"
-_makeimg_part_2 :
-	@echo "$(MAPPER_DEVICE)"
-	$(SUDO) $(MKEXT2) $(MAPPER_DEVICE)
-
-	$(SUDO) $(MKDIR) -p $(FS_DIR)
-	$(SUDO) $(MOUNT) $(MAPPER_DEVICE) $(FS_DIR)
-	$(SUDO) $(GRUB_INSTALL) --root-directory="$(PWD)/$(FS_DIR)" $(IMAGE_FILE) --compress=xz --locales= --themes= --install-modules="normal part_msdos ext2 linux"
-	$(SUDO) cp -f $(GRUB_CONFIG) "$(FS_DIR)/boot/grub/grub.cfg"
-
-	$(SUDO) cp $(KERNEL) "$(PWD)/$(FS_DIR)/boot/vmlinuz"
-	$(SUDO) $(CHOWN) -R root:root $(FS_DIR)
-	$(SUDO) ls -R "$(FS_DIR)"
-	$(SUDO) $(UMOUNT) -R $(FS_DIR)
-	$(SUDO) $(KPARTX) -dv $(LOOP_DEVICE)
-	$(SUDO) $(LOSETUP) -d $(LOOP_DEVICE)
-	$(SUDO) $(RM) -r -f $(FS_DIR)
+	$(MKFS) $(IMAGE_FILE)
+	$(SUDO) $(MOUNT) $(IMAGE_FILE) $(FS_DIR)
+	$(SUDO) cp -f $(KERNEL) "$(FS_DIR)/vmlinuz"
+	$(SUDO) cp -f $(SYSLINUX_CFG) "$(FS_DIR)/syslinux.cfg"
+	$(SUDO) $(UMOUNT) $(FS_DIR)
+	$(SUDO) $(SYSLINUX) --install $(IMAGE_FILE)
 
 $(IMAGE_FILE).xz : $(IMAGE_FILE)
 	$(XZ) -z -c -9 $^ > $@

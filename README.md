@@ -1,6 +1,6 @@
 # MLinux Minimal - A Tiny Linux distro
 
-<img src="https://raw.githubusercontent.com/mlinux-project/.github/main/images/mlinux-minimal.svg" width="25%">
+<img src="https://raw.githubusercontent.com/mlinux-project/.github/main/images/mlinux-minimal.svg" width="25%" alt="MLinux Minimal">
 
 ## Dependencies
 
@@ -70,14 +70,6 @@
   - Download:
     <https://github.com/westes/flex/releases>
 
-- GNU Grub
-  - Mandatory.
-  - GNU Grub 2.x. For install grub in the image file.
-  - Homepage:
-    <https://www.gnu.org/software/grub>
-  - Download:
-    <https://ftp.gnu.org/gnu/grub>
-
 - GNU Make
   - Mandatory.
   - GNU Make 3.79.1 or newer.
@@ -93,12 +85,6 @@
     <https://www.gnu.org/software/grep>
   - Download:
     <https://ftp.gnu.org/gnu/grep>
-
-- Kpartx
-  - Mandatory.
-  - For mounting filesystem.
-  - Homepage:
-    <http://christophe.varoqui.free.fr>
 
 - libelf
   - Mandatory.
@@ -131,6 +117,14 @@
   - Download:
     <https://www.sudo.ws/dist>
 
+- Syslinux
+  - Mandatory.
+  - For creating disk image.
+  - Homepage:
+    <https://www.syslinux.org>
+  - Download:
+  - <https://www.kernel.org/pub/linux/utils/boot/syslinux>
+
 - Util-linux
   - Mandatory.
   - Homepage:
@@ -157,7 +151,7 @@
 #### Install binary building dependencies on Debian
 
 ```shell
-sudo apt-get update && sudo apt-get install gcc cpio xz-utils gawk grub2 make grep kpartx qemu-utils sed util-linux wget binutils libelf-dev libssl-dev bc flex bison -y
+sudo apt-get update && sudo apt-get install gcc cpio xz-utils gawk make grep qemu-utils sed util-linux wget binutils libelf-dev libssl-dev bc flex bison -y
 ```
 
 ### For building tarball
