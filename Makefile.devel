@@ -42,13 +42,13 @@ check : all check-configures dist
 
 # Make a distribution tarball
 
-CONFIG_FILES = busybox.config grub.cfg linux.config
+CONFIG_FILES = busybox.config linux.config syslinux.config
 
 DOC_FILES = LICENSE README.md
 
 MAKE_FILES = m4 aclocal.m4 configure.ac configure Makefile.devel Makefile.in mirrors.mk.in
 
-SOURCE_FILES = fdisk-input.txt bb-patches
+SOURCE_FILES = bb-patches
 
 DIST_FILELIST = $(CONFIG_FILES) $(DOC_FILES) $(MAKE_FILES) $(SOURCE_FILES)
 

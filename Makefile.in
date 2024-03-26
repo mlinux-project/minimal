@@ -122,6 +122,7 @@ $(KERNEL).xz : $(KERNEL)
 $(IMAGE_FILE) : $(KERNEL) $(SYSLINUX_CFG)
 	$(CREATE_IMAGE)
 	$(MKFS) $(IMAGE_FILE)
+	$(MKDIR) -p $(FS_DIR)
 	$(SUDO) $(MOUNT) $(IMAGE_FILE) $(FS_DIR)
 	$(SUDO) cp -f $(KERNEL) "$(FS_DIR)/vmlinuz"
 	$(SUDO) cp -f $(SYSLINUX_CFG) "$(FS_DIR)/syslinux.cfg"
