@@ -66,7 +66,7 @@ jobs:
     - name: Collect dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install gcc cpio xz-utils gawk grub2 make grep kpartx qemu-utils sed util-linux wget -y
+        sudo apt-get install gcc cpio xz-utils gawk syslinux make grep kpartx qemu-utils sed util-linux wget -y
         sudo apt-get install binutils libelf-dev libssl-dev bc flex bison -y
 
     - name: Get source distribution tarball
