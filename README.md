@@ -173,7 +173,7 @@ sudo apt-get update && sudo apt-get install gcc cpio xz-utils gawk make grep qem
 #### Install tarball building dependencies Debian
 
 ```shell
-sudo apt-get update && sudo apt-get autoconf automake -y
+sudo apt-get update && sudo apt-get install autoconf automake -y
 ```
 
 ## Build source tarball
