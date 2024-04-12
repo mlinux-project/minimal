@@ -15,6 +15,7 @@ MOUNT := @MOUNT@
 PATCH := @PATCH@
 QEMU_IMG := @QEMU_IMG@
 RM := @RM@
+SED := @SED@
 SUDO := @SUDO@
 SYSLINUX := @SYSLINUX@
 TAR := @TAR@
@@ -38,8 +39,9 @@ KERNEL = vmlinuz
 LINUX = linux-@LINUX_VERSION@
 LINUX_CONFIG = linux.config
 LINUX_VERSION_MAJOR = @LINUX_VERSION_MAJOR@
-MUSL = musl-@MUSL_VERSION@
-MUSL_CC = $(PWD)/musl/bin/musl-gcc
+UCLIBC = uClibc-@UCLIBC_VERSION@
+UCLIBC_CC = $(CC) -specs "$(PWD)/uclibc.specs"
+UCLIBC_CONFIG = uclibc.config
 ROOTFS = rootfs
 SYSLINUX_CFG = syslinux.config
 
@@ -50,28 +52,34 @@ DU := du
 include mirrors.mk
 BUSYBOX_URL = $(BUSYBOX_MIRROR)/$(BUSYBOX).tar.bz2
 LINUX_URL = $(LINUX_MIRROR)/v$(LINUX_VERSION_MAJOR).x/$(LINUX).tar.xz
-MUSL_URL = $(MUSL_MIRROR)/$(MUSL).tar.gz
+UCLIBC_URL = $(UCLIBC_MIRROR)/$(UCLIBC).tar.xz
 
 ifneq (,)
 This makefile requires GNU Make.
 endif
 
-.PHONY : _makeimg_part_1 _makeimg_part_2 clean totally-clean check
+.PHONY : clean totally-clean check
 
 all : $(ROOTFS).tar.xz $(KERNEL).xz $(IMAGE_FILE).xz
 
-$(MUSL).tar.gz : 
-	$(WGET) "$(MUSL_URL)" -O $@
+$(UCLIBC).tar.xz : 
+	$(WGET) "$(UCLIBC_URL)" -O $@
 
-$(MUSL) : $(MUSL).tar.gz
+$(UCLIBC) : $(UCLIBC).tar.xz
 	@echo "Extracting $@ ..."
-	$(TAR) -zxf $^
+	$(TAR) -xf $^
 
-musl : $(MUSL) $(LINUX)
-	cd $(MUSL) && ./configure --prefix="$(PWD)/$@" --disable-shared --enable-static --disable-debug --enable-optimize --enable-warnings --enable-wrapper
-	cd $(MUSL) && $(MAKE) all
-	cd $(MUSL) && $(MAKE) install
-	if test ! -f $(MUSL_CC); then echo "$(MUSL_CC) is not exists!" && exit 1; fi
+linux-headers : $(LINUX) $(LINUX_CONFIG)
+	$(MKDIR) -p $@
+	cp $(LINUX_CONFIG) "$(LINUX)/.config"
+	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
+
+uclibc : $(UCLIBC) $(LINUX) linux-headers
+	$(MKDIR) -p $@
+	cp $(UCLIBC_CONFIG) "$(UCLIBC)/.config"
+	$(SED) -i 's|@KERNEL_HEADERS@|$(PWD)/linux-headers/include|g' "$(UCLIBC)/.config"
+	cd $(UCLIBC) && $(MAKE) all
+	cd $(UCLIBC) && $(MAKE) install PREFIX="$(PWD)/$@"
 	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
 
 $(BUSYBOX).tar.bz2 :
@@ -82,14 +90,14 @@ $(BUSYBOX) : $(BUSYBOX).tar.bz2
 	$(TAR) -xf $^
 	$(PATCH) -p1 "$@/init/init.c" < bb-patches/init.c.patch
 
-$(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) musl
+$(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) uclibc
 	cp $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"
-	cd $(BUSYBOX) && $(MAKE) all CC="$(MUSL_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	cd $(BUSYBOX) && $(MAKE) all CC="$(UCLIBC_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 $(ROOTFS) : $(BUSYBOX)/busybox
 	$(MKDIR) -p $(ROOTFS)
 
-	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(MUSL_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(UCLIBC_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 	cd $(ROOTFS) && $(MKDIR) -p dev
 	$(SUDO) $(CHOWN) -R root:root $(ROOTFS)
@@ -145,7 +153,7 @@ clean :
 	$(RM) -f $(IMAGE_FILE).xz
 
 totally-clean : clean
-	$(RM) -r -f musl
+	$(RM) -r -f uclibc
 	$(RM) -f $(BUSYBOX).tar.bz2
 	$(RM) -f $(LINUX).tar.xz
 

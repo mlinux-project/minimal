@@ -39,6 +39,7 @@ AC_PATH_PROG([MOUNT], [mount])
 AC_PATH_PROG([PATCH], [patch])
 AC_PATH_PROG([QEMU_IMG], [qemu-img])
 AC_PATH_PROG([RM], [rm])
+AC_PATH_PROG([SED], [sed])
 AC_PATH_PROG([SUDO], [sudo])
 AC_PATH_PROG([SYSLINUX], [syslinux])
 AC_PATH_PROG([TAR], [tar])
@@ -66,13 +67,13 @@ LINUX_VERSION_MAJOR=$(echo $LINUX_VERSION | cut -d. -f1)
 AC_SUBST([LINUX_VERSION])
 AC_SUBST([LINUX_VERSION_MAJOR])
 
-AC_ARG_WITH([musl-version],
-    [AS_HELP_STRING([--with-musl-version=X.X.X],
-        [define the version of musl libc])],
-    [MUSL_VERSION=$withval],
-    [MUSL_VERSION=1.2.5]
+AC_ARG_WITH([uclibc-version],
+    [AS_HELP_STRING([--with-uclibc-version=X.X.X],
+        [define the version of µClibc])],
+    [UCLIBC_VERSION=$withval],
+    [UCLIBC_VERSION=0.9.33.2]
 )
-AC_SUBST([MUSL_VERSION])
+AC_SUBST([UCLIBC_VERSION])
 
 
 dnl Mirror options.
@@ -107,23 +108,26 @@ fi
 AC_SUBST([BUSYBOX_MIRROR])
 AC_SUBST([BUSYBOX_MIRROR_CUSTOME])
 
-AC_ARG_WITH([musl-mirror],
-    [AS_HELP_STRING([--with-musl-mirror=OFFICIAL | <URL>],
-        [define the mirror of musl libc])],
-    [MUSL_MIRROR=$withval],
-    [MUSL_MIRROR=OFFICIAL]
+AC_ARG_WITH([uclibc-mirror],
+    [AS_HELP_STRING([--with-uclibc-mirror=OFFICIAL | <URL>],
+        [define the mirror of µClibc])],
+    [UCLIBC_MIRROR=$withval],
+    [UCLIBC_MIRROR=OFFICIAL]
 )
-MUSL_MIRROR_CHECK=$(echo "$MUSL_MIRROR" | tr "[[:lower:]]" "[[:upper:]]")
-MUSL_MIRROR_CUSTOME=
-if test "$MUSL_MIRROR_CHECK" != "OFFICIAL"; then
-    MUSL_MIRROR_CUSTOME=$MUSL_MIRROR
-    MUSL_MIRROR=CUSTOME
+UCLIBC_MIRROR_CHECK=$(echo "$UCLIBC_MIRROR" | tr "[[:lower:]]" "[[:upper:]]")
+UCLIBC_MIRROR_CUSTOME=
+if test "$UCLIBC_MIRROR_CHECK" != "OFFICIAL"; then
+    UCLIBC_MIRROR_CUSTOME=$UCLIBC_MIRROR
+    UCLIBC_MIRROR=CUSTOME
 fi
-AC_SUBST([MUSL_MIRROR])
-AC_SUBST([MUSL_MIRROR_CUSTOME])
+AC_SUBST([UCLIBC_MIRROR])
+AC_SUBST([UCLIBC_MIRROR_CUSTOME])
 
+UCLIBC_SYSROOT=$(pwd)/uclibc
+AC_SUBST([UCLIBC_SYSROOT])
 
 dnl Checks for build configuration.
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([mirrors.mk])
+AC_CONFIG_FILES([uclibc.specs])
 AC_OUTPUT

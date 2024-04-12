@@ -16,8 +16,9 @@ linux-*
 Makefile
 mlinux-minimal-*
 mirrors.mk
-musl
-musl-*
+uclibc
+uClibc-*
+uclibc.specs
 rootfs
 *.sha256
 *.tar

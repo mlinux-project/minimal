@@ -36,7 +36,6 @@ check-configures : $(CONFIGURE)
 check : all check-configures dist
 	./$(CONFIGURE) --with-linux-mirror=TSINGHUA
 	$(MAKE) all
-	$(MAKE) check
 	qemu-system-x86_64 -hda disk.img -m 1024
 	qemu-system-x86_64 -kernel vmlinuz -m 1024
 
