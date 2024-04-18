@@ -69,18 +69,13 @@ $(UCLIBC) : $(UCLIBC).tar.xz
 	@echo "Extracting $@ ..."
 	$(TAR) -xf $^
 
-linux-headers : $(LINUX) $(LINUX_CONFIG)
-	$(MKDIR) -p $@
-	cp $(LINUX_CONFIG) "$(LINUX)/.config"
-	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
-
-uclibc : $(UCLIBC) $(LINUX) linux-headers
+uclibc : $(UCLIBC) $(LINUX)
 	$(MKDIR) -p $@
 	cp $(UCLIBC_CONFIG) "$(UCLIBC)/.config"
-	$(SED) -i 's|@KERNEL_HEADERS@|$(PWD)/linux-headers/include|g' "$(UCLIBC)/.config"
+	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
+	$(SED) -i 's|@KERNEL_HEADERS@|$(PWD)/$@/include|g' "$(UCLIBC)/.config"
 	cd $(UCLIBC) && $(MAKE) all
 	cd $(UCLIBC) && $(MAKE) install PREFIX="$(PWD)/$@"
-	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
 
 $(BUSYBOX).tar.bz2 :
 	$(WGET) "$(BUSYBOX_URL)" -O $@
