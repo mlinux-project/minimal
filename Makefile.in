@@ -5,6 +5,7 @@ PWD ?= $(shell pwd)
 
 # Dependencies for building.
 CC := @CC@
+CP := @CP@
 CHMOD := @CHMOD@
 CHOWN := @CHOWN@
 CPIO := @CPIO@
@@ -31,7 +32,6 @@ ARCH = x86_64
 BUSYBOX = busybox-@BUSYBOX_VERSION@
 BUSYBOX_CONFIG = busybox.config
 FS_DIR = fs
-FSTAB = fstab
 IMAGE_FILE = disk.img
 IMAGE_SIZE = 6.1M
 INITRD_FILE = initrd.cpio
@@ -39,8 +39,10 @@ KERNEL = vmlinuz
 LINUX = linux-@LINUX_VERSION@
 LINUX_CONFIG = linux.config
 LINUX_VERSION_MAJOR = @LINUX_VERSION_MAJOR@
+KERNEL_IMAGE = $(LINUX)/arch/$(ARCH)/boot/bzImage
 UCLIBC = uClibc-@UCLIBC_VERSION@
-UCLIBC_CC = $(CC) -specs "$(PWD)/uclibc.specs"
+UCLIBC_SPECS = uclibc.specs
+UCLIBC_CC = $(CC) -specs "$(PWD)/$(UCLIBC_SPECS)"
 UCLIBC_CONFIG = uclibc.config
 ROOTFS = rootfs
 SYSLINUX_CFG = syslinux.config
@@ -71,7 +73,7 @@ $(UCLIBC) : $(UCLIBC).tar.xz
 
 uclibc : $(UCLIBC) $(LINUX)
 	$(MKDIR) -p $@
-	cp $(UCLIBC_CONFIG) "$(UCLIBC)/.config"
+	$(CP) $(UCLIBC_CONFIG) "$(UCLIBC)/.config"
 	cd $(LINUX) && CC=false $(MAKE) ARCH=$(ARCH) "INSTALL_HDR_PATH=$(PWD)/$@" headers_install
 	$(SED) -i 's|@KERNEL_HEADERS@|$(PWD)/$@/include|g' "$(UCLIBC)/.config"
 	cd $(UCLIBC) && $(MAKE) all
@@ -86,7 +88,7 @@ $(BUSYBOX) : $(BUSYBOX).tar.bz2
 	$(PATCH) -p1 "$@/init/init.c" < bb-patches/init.c.patch
 
 $(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) uclibc
-	cp $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"
+	$(CP) $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"
 	cd $(BUSYBOX) && $(MAKE) all CC="$(UCLIBC_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 $(ROOTFS) : $(BUSYBOX)/busybox
@@ -111,13 +113,13 @@ $(LINUX) : $(LINUX).tar.xz
 	@echo "Extracting $@ ..."
 	$(TAR) -xf $^
 
-$(LINUX)/arch/$(ARCH)/boot/bzImage : $(LINUX) $(LINUX_CONFIG) $(INITRD_FILE)
-	cp $(LINUX_CONFIG) "$(LINUX)/.config"
+$(KERNEL_IMAGE) : $(LINUX) $(LINUX_CONFIG) $(INITRD_FILE)
+	$(CP) $(LINUX_CONFIG) "$(LINUX)/.config"
 	cd $(LINUX) && $(MAKE) all CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
-$(KERNEL) : $(LINUX)/arch/$(ARCH)/boot/bzImage
-	cp $^ $@
-	$(CHMOD) 0755 $@
+$(KERNEL) : $(KERNEL_IMAGE)
+	$(CP) $^ $@
+	$(CHMOD) +x $@
 
 $(KERNEL).xz : $(KERNEL)
 	$(XZ) -z -c -9 $^ > $@
@@ -127,8 +129,8 @@ $(IMAGE_FILE) : $(KERNEL) $(SYSLINUX_CFG)
 	$(MKFS) $(IMAGE_FILE)
 	$(MKDIR) -p $(FS_DIR)
 	$(SUDO) $(MOUNT) $(IMAGE_FILE) $(FS_DIR)
-	$(SUDO) cp -f $(KERNEL) "$(FS_DIR)/vmlinuz"
-	$(SUDO) cp -f $(SYSLINUX_CFG) "$(FS_DIR)/syslinux.cfg"
+	$(SUDO) $(CP) -f $(KERNEL) "$(FS_DIR)/$(KERNEL)"
+	$(SUDO) $(CP) -f $(SYSLINUX_CFG) "$(FS_DIR)/syslinux.cfg"
 	$(SUDO) $(UMOUNT) $(FS_DIR)
 	$(SUDO) $(SYSLINUX) --install $(IMAGE_FILE)
 
@@ -136,23 +138,25 @@ $(IMAGE_FILE).xz : $(IMAGE_FILE)
 	$(XZ) -z -c -9 $^ > $@
 
 clean :
-	$(RM) -r -f $(MUSL)
+	$(RM) -r -f $(UCLIBC)
+	$(RM) -r -f uclibc
 	$(RM) -r -f $(BUSYBOX)
 	$(RM) -r -f $(LINUX)
 	$(RM) -r -f $(ROOTFS)
 	$(RM) -f $(ROOTFS).tar
 	$(RM) -f $(ROOTFS).tar.xz
-	$(RM) -f initrd.cpio
-	$(RM) -f vmlinuz
+	$(RM) -f $(INITRD_FILE)
+	$(RM) -f $(KERNEL)
+	$(RM) -f $(KERNEL).xz
 	$(RM) -f $(IMAGE_FILE)
 	$(RM) -f $(IMAGE_FILE).xz
 
 totally-clean : clean
-	$(RM) -r -f uclibc
+	$(RM) -f $(UCLIBC_SPECS)
 	$(RM) -f $(BUSYBOX).tar.bz2
 	$(RM) -f $(LINUX).tar.xz
 
 check : all
 	@echo "BUSYBOX: $(BUSYBOX)"
 	$(SUDO) $(DU) -sh $(ROOTFS).tar.xz $(IMAGE_FILE).xz
-	cd $(BUSYBOX) && make check
+	cd $(BUSYBOX) && $(MAKE) check
