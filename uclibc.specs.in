@@ -19,7 +19,7 @@ libgcc.a%s %:if-exists(libgcc_eh.a%s)
 crtendS.o%s @UCLIBC_SYSROOT@/lib/crtn.o
 
 *link:
--dynamic-linker /lib/ld-ulibc-x86_64.so.0 -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-export-dynamic}
+-dynamic-linker /lib/ld-ulibc.so.0 -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-export-dynamic}
 
 *esp_link:
 

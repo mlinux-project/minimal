@@ -27,23 +27,22 @@ XZ := @XZ@
 CREATE_IMAGE = $(QEMU_IMG) create -f raw $(IMAGE_FILE) $(IMAGE_SIZE)
 
 # Configuration.
-# We only support x86_64 for now.
 ARCH = x86_64
 BUSYBOX = busybox-@BUSYBOX_VERSION@
-BUSYBOX_CONFIG = busybox.config
+BUSYBOX_CONFIG = busybox.$(ARCH).config
 FS_DIR = fs
 IMAGE_FILE = disk.img
 IMAGE_SIZE = 6.1M
 INITRD_FILE = initrd.cpio
 KERNEL = vmlinuz
 LINUX = linux-@LINUX_VERSION@
-LINUX_CONFIG = linux.config
+LINUX_CONFIG = linux.$(ARCH).config
 LINUX_VERSION_MAJOR = @LINUX_VERSION_MAJOR@
 KERNEL_IMAGE = $(LINUX)/arch/$(ARCH)/boot/bzImage
 UCLIBC = uClibc-@UCLIBC_VERSION@
 UCLIBC_SPECS = uclibc.specs
 UCLIBC_CC = $(CC) -specs "$(PWD)/$(UCLIBC_SPECS)"
-UCLIBC_CONFIG = uclibc.config
+UCLIBC_CONFIG = uclibc.$(ARCH).config
 ROOTFS = rootfs
 SYSLINUX_CFG = syslinux.config
 

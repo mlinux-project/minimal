@@ -41,7 +41,7 @@ check : all check-configures dist
 
 # Make a distribution tarball
 
-CONFIG_FILES = busybox.config linux.config syslinux.config
+CONFIG_FILES = busybox.x86_64.config linux.x86_64.config syslinux.config
 
 DOC_FILES = LICENSE README.md
 
