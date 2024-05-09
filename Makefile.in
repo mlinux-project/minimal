@@ -85,6 +85,8 @@ $(BUSYBOX) : $(BUSYBOX).tar.bz2
 	@echo "Extracting $@ ..."
 	$(TAR) -xf $^
 	$(PATCH) -p1 "$@/init/init.c" < bb-patches/init.c.patch
+	$(PATCH) -p1 "$@/shell/hush.c" < bb-patches/hush.c.patch
+	$(PATCH) -p1 "$@/shell/match.c" < bb-patches/match.c.patch
 
 $(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) uclibc
 	$(CP) $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"

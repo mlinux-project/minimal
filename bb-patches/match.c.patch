@@ -1,0 +1,71 @@
+--- match.c.old	2024-05-09 22:45:25.817157573 +0800
++++ match.c	2024-05-09 22:48:03.947149835 +0800
+@@ -28,68 +28,6 @@
+ 
+ char* FAST_FUNC scan_and_match(char *string, const char *pattern, unsigned flags)
+ {
+-	char *loc;
+-	char *end;
+-	unsigned len = strlen(string);
+-	int early_exit;
+-
+-	/* We can stop the scan early only if the string part
+-	 * we are matching against is shrinking, and the pattern has
+-	 * an unquoted "star" at the corresponding end. There are two cases.
+-	 * Case 1:
+-	 * "qwerty" does not match against pattern "*zy",
+-	 * no point in trying to match "werty", "erty" etc:
+-	 */
+-	early_exit = (flags == (SCAN_MOVE_FROM_LEFT + SCAN_MATCH_RIGHT_HALF) && pattern[0] == '*');
+-
+-	if (flags & SCAN_MOVE_FROM_LEFT) {
+-		loc = string;
+-		end = string + len + 1;
+-	} else {
+-		loc = string + len;
+-		end = string - 1;
+-		if (flags == (SCAN_MOVE_FROM_RIGHT + SCAN_MATCH_LEFT_HALF)) {
+-			/* Case 2:
+-			 * "qwerty" does not match against pattern "qz*",
+-			 * no point in trying to match "qwert", "qwer" etc:
+-			 */
+-			const char *p = pattern + strlen(pattern);
+-			if (--p >= pattern && *p == '*') {
+-				early_exit = 1;
+-				while (--p >= pattern && *p == '\\')
+-					early_exit ^= 1;
+-			}
+-		}
+-	}
+-
+-	while (loc != end) {
+-		int r;
+-
+-		if (flags & SCAN_MATCH_LEFT_HALF) {
+-			char c = *loc;
+-			*loc = '\0';
+-			r = fnmatch(pattern, string, 0);
+-			//bb_error_msg("fnmatch('%s','%s',0):%d", pattern, string, r);
+-			*loc = c;
+-		} else {
+-			r = fnmatch(pattern, loc, 0);
+-			//bb_error_msg("fnmatch('%s','%s',0):%d", pattern, loc, r);
+-		}
+-		if (r == 0) /* match found */
+-			return loc;
+-		if (early_exit) {
+-#ifdef STANDALONE
+-			printf("(early exit) ");
+-#endif
+-			break;
+-		}
+-
+-		if (flags & SCAN_MOVE_FROM_LEFT) {
+-			loc++;
+-		} else {
+-			loc--;
+-		}
+-	}
+ 	return NULL;
+ }
+ 
