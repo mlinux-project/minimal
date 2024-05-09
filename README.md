@@ -148,10 +148,18 @@
   - Download:
     <https://xz.tukaani.org/xz-utils/#releases>
 
+- rsync
+  - Mandatory
+  - For installing Linux header.
+  - rsync Homepage:
+    <https://rsync.samba.org>
+  - Download:
+    <https://rsync.samba.org/download.html>
+
 #### Install binary building dependencies on Debian
 
 ```shell
-sudo apt-get update && sudo apt-get install gcc cpio xz-utils gawk make grep qemu-utils sed util-linux wget binutils libelf-dev libssl-dev bc flex bison -y
+sudo apt-get update && sudo apt-get install gcc cpio xz-utils gawk make grep qemu-utils sed util-linux wget binutils libelf-dev libssl-dev bc flex bison rsync -y
 ```
 
 ### For building tarball

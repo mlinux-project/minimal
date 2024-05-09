@@ -27,7 +27,7 @@ XZ := @XZ@
 CREATE_IMAGE = $(QEMU_IMG) create -f raw $(IMAGE_FILE) $(IMAGE_SIZE)
 
 # Configuration.
-ARCH = x86_64
+ARCH ?= x86_64
 BUSYBOX = busybox-@BUSYBOX_VERSION@
 BUSYBOX_CONFIG = busybox.$(ARCH).config
 FS_DIR = fs
@@ -88,12 +88,12 @@ $(BUSYBOX) : $(BUSYBOX).tar.bz2
 
 $(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) uclibc
 	$(CP) $(BUSYBOX_CONFIG) "$(BUSYBOX)/.config"
-	cd $(BUSYBOX) && $(MAKE) all CC="$(UCLIBC_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	cd $(BUSYBOX) && $(MAKE) all CC="$(UCLIBC_CC)"
 
 $(ROOTFS) : $(BUSYBOX)/busybox
 	$(MKDIR) -p $(ROOTFS)
 
-	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(UCLIBC_CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(UCLIBC_CC)"
 
 	cd $(ROOTFS) && $(MKDIR) -p dev
 	$(SUDO) $(CHOWN) -R root:root $(ROOTFS)
@@ -114,7 +114,7 @@ $(LINUX) : $(LINUX).tar.xz
 
 $(KERNEL_IMAGE) : $(LINUX) $(LINUX_CONFIG) $(INITRD_FILE)
 	$(CP) $(LINUX_CONFIG) "$(LINUX)/.config"
-	cd $(LINUX) && $(MAKE) all CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+	cd $(LINUX) && $(MAKE) all CC="$(UCLIBC_CC)"
 
 $(KERNEL) : $(KERNEL_IMAGE)
 	$(CP) $^ $@

@@ -8,3 +8,11 @@
  //config:	help
  //config:	init is the first program run when the system boots.
  //config:
+@@ -128,7 +128,6 @@
+ 
+ #include "libbb.h"
+ #include "common_bufsiz.h"
+-#include <syslog.h>
+ #ifdef __linux__
+ # include <linux/vt.h>
+ # include <sys/sysinfo.h>

@@ -21,7 +21,6 @@ AC_PROG_MAKE_SET
 
 dnl Checks for basic programs.
 AC_PROG_CC
-AC_PATH_PROG([STRIP], [strip], [:])
 
 
 dnl Checks for programs.
