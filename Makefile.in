@@ -7,7 +7,6 @@ PWD ?= $(shell pwd)
 CC := @CC@
 CP := @CP@
 CHMOD := @CHMOD@
-CHOWN := @CHOWN@
 CPIO := @CPIO@
 FIND := @FIND@
 MKDIR := @MKDIR@
@@ -95,10 +94,9 @@ $(BUSYBOX)/busybox : $(BUSYBOX) $(BUSYBOX_CONFIG) uclibc
 $(ROOTFS) : $(BUSYBOX)/busybox
 	$(MKDIR) -p $(ROOTFS)
 
-	cd $(BUSYBOX) && $(SUDO) $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(UCLIBC_CC)"
+	cd $(BUSYBOX) && $(MAKE) install CONFIG_PREFIX="$(PWD)/$@" CC="$(UCLIBC_CC)"
 
 	cd $(ROOTFS) && $(MKDIR) -p dev
-	$(SUDO) $(CHOWN) -R root:root $(ROOTFS)
 
 $(ROOTFS).tar.xz : $(ROOTFS)
 	$(TAR) -c -v -f $(ROOTFS).tar $^
@@ -133,7 +131,7 @@ $(IMAGE_FILE) : $(KERNEL) $(SYSLINUX_CFG)
 	$(SUDO) $(CP) -f $(KERNEL) "$(FS_DIR)/$(KERNEL)"
 	$(SUDO) $(CP) -f $(SYSLINUX_CFG) "$(FS_DIR)/syslinux.cfg"
 	$(SUDO) $(UMOUNT) $(FS_DIR)
-	$(SUDO) $(SYSLINUX) --install $(IMAGE_FILE)
+	$(SYSLINUX) --install $(IMAGE_FILE)
 
 $(IMAGE_FILE).xz : $(IMAGE_FILE)
 	$(XZ) -z -c -9 $^ > $@

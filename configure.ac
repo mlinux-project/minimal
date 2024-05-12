@@ -28,7 +28,6 @@ CL_PROG_CP
 CL_PROG_LN
 AC_PROG_LN_S
 AC_PATH_PROG([CHMOD], [chmod])
-AC_PATH_PROG([CHOWN], [chown])
 AC_PATH_PROG([CP], [cp])
 AC_PATH_PROG([CPIO], [cpio])
 AC_PATH_PROG([FDISK], [fdisk])
