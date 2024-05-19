@@ -83,7 +83,7 @@ $(BUSYBOX).tar.bz2 :
 $(BUSYBOX) : $(BUSYBOX).tar.bz2
 	@echo "Extracting $@ ..."
 	$(TAR) -xf $^
-	$(PATCH) -p1 "$@/init/init.c" < bb-patches/init.c.patch
+	$(CP) -f bb-patches/init.c "$@/init/init.c"
 	$(PATCH) -p1 "$@/shell/hush.c" < bb-patches/hush.c.patch
 	$(PATCH) -p1 "$@/shell/match.c" < bb-patches/match.c.patch
 
