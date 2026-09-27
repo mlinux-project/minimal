@@ -111,6 +111,7 @@ $(LINUX).tar.xz :
 $(LINUX) : $(LINUX).tar.xz
 	@echo "Extracting $@ ..."
 	$(TAR) -xf $^
+	$(PATCH) -p1 "$@/arch/x86/boot/compressed/Makefile" < linux-patches/std-gnu11.patch
 
 $(KERNEL_IMAGE) : $(LINUX) $(LINUX_CONFIG) $(INITRD_FILE)
 	$(CP) $(LINUX_CONFIG) "$(LINUX)/.config"

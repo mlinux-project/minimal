@@ -12,6 +12,7 @@ fs
 *.img
 initrd.cpio
 linux-*
+!linux-patches/
 *.log
 Makefile
 mlinux-minimal-*
